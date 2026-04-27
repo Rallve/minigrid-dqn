@@ -31,7 +31,7 @@ evalEpisodes = 1000  # Number of episodes to be used for evaluation
 random.seed(5)
 
 
-max_steps = env.max_steps
+max_steps = env.unwrapped.max_steps
 
 
 def evaluate_model():
@@ -79,17 +79,17 @@ def evaluate_model():
 
             if done or truncated:
                 totalReward += reward
-                totalSteps += env.step_count
+                totalSteps += env.unwrapped.step_count
                 if done:
                     print(
                         "Finished evaluation episode %d with reward %f, %d steps, reaching the goal"
-                        % (e, reward, env.step_count)
+                        % (e, reward, env.unwrapped.step_count)
                     )
                     finishCounter += 1
                 if truncated:
                     print(
                         "Failed evaluation episode %d with reward %f, %d steps"
-                        % (e, reward, env.step_count)
+                        % (e, reward, env.unwrapped.step_count)
                     )
                 break
 

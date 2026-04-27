@@ -99,9 +99,10 @@ def optimize_model():
     state_action_values = policy_net(state_batch).gather(1, action_batch)
 
     reward_batch = torch.tensor(
-        batch.reward
-    )  # , device=device, dtype=torch.float).unsqueeze(1)
+        batch.reward, device=device, dtype=torch.float
+    ).unsqueeze(1)
     non_final_next_states = torch.cat([s for s in batch.nextState if s is not None])
+    
     # Compute the expected Q-values (TD-targets) for the next states
     next_state_values = torch.zeros(batch_size, device=device)
     non_final_mask = torch.tensor(
@@ -113,7 +114,7 @@ def optimize_model():
         target_net(non_final_next_states).max(1)[0].detach()
     )
 
-    TDtargets = (next_state_values * gamma) + reward_batch
+    TDtargets = (next_state_values * gamma) + reward_batch.squeeze(1)
 
     # Compute the TD-errors and the loss
     TDerrors = TDtargets.unsqueeze(1) - state_action_values
@@ -151,6 +152,10 @@ hiddenLayerSize = (128, 128)
 policy_net = DQN(inputSize, numActions, hiddenLayerSize)
 target_net = DQN(inputSize, numActions, hiddenLayerSize)
 
+# Move models to the device
+policy_net = policy_net.to(device)
+target_net = target_net.to(device)
+
 # # Copy the weights of the policy network to the target network
 # target_net.load_state_dict(policy_net.state_dict())
 
@@ -175,7 +180,7 @@ optimizer = optim.Adam(policy_net.parameters(), lr=alpha)
 global steps_done
 steps_done = 3
 
-max_steps = env.max_steps
+max_steps = env.unwrapped.max_steps
 
 
 def train_model():

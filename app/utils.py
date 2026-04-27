@@ -144,7 +144,8 @@ def preprocess(observation):
         numpy.ndarray: The preprocessed observation
     """
 
-    return flatten(normalize(extract_object_information(observation), 10.0))
+    tensor = flatten(normalize(extract_object_information(observation), 10.0))
+    return tensor.to(device)
 
 
 def save_model(policy_net, filename):
@@ -204,7 +205,6 @@ class DQN(nn.Module):
     # Called with either one element to determine next action, or a batch
     # during optimization. Returns tensor([[left0exp,right0exp]...]).
     def forward(self, x):
-        x = x.to(device)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
