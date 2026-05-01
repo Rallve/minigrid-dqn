@@ -53,33 +53,14 @@ random.seed(5)
 
 
 # define some functions
-## Function to e-greedily select next action based on current state
+## Function to select next action based on current state
 def select_action(state):
-    # generate a random number
-    sample = random.random()
-
-    # calculate the epsilon threshold, based on the epsilon-start value, the epsilon-stop value,
-    # the number of training steps taken and the epsilon decay rate
-    # here we are using an exponential decay rate for the epsilon value
-    eps_threshold = stop_epsilon + (start_epsilon - stop_epsilon) * math.exp(
-        -1.0 * steps_done / decay_rate
-    )
-
-    # compare the generated random number to the epsilon threshold
-    if sample > eps_threshold:
-        # act greedily towards the Q-values of our policy network, given the state
-
-        # we do not want to gather gradients as we are only generating experience, not training the network
-        with torch.no_grad():
-            # t.max(1) will return largest column value of each row.
-            # second column on max result is index of where max element was
-            # found, so we pick action with the larger expected reward.
-            return policy_net(state).max(1)[1].unsqueeze(0)
-    else:
-        # select a random action with equal probability
-        return torch.tensor(
-            [[random.randrange(numActions)]], device=device, dtype=torch.long
-        )
+    # we do not want to gather gradients as we are only generating experience, not training the network
+    with torch.no_grad():
+        # t.max(1) will return largest column value of each row.
+        # second column on max result is index of where max element was
+        # found, so we pick action with the larger expected reward.
+        return policy_net(state).max(1)[1].unsqueeze(0)
 
 
 def optimize_model():
@@ -195,6 +176,9 @@ def train_model():
         total_reward = 0
 
         for step in range(max_steps):
+            policy_net.sample_noise()
+            target_net.sample_noise()
+
             # Choose an action using epsilon-greedy strategy
             # action = select_action_e_greedy(state, stop_epsilon, start_epsilon, decay_rate, steps_done, numActions, policy_net)
             action = select_action(state)

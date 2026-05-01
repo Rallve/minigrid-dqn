@@ -32,6 +32,8 @@ import pickle
 # Import 'time' to keep track of the time
 import time
 
+import math
+
 # if gpu is to be used, otherwise use cpu
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -198,9 +200,9 @@ class DQN(nn.Module):
 
     def __init__(self, inputSize, numActions, hiddenLayerSize=(256, 128)):
         super(DQN, self).__init__()
-        self.fc1 = nn.Linear(inputSize, hiddenLayerSize[0])
-        self.fc2 = nn.Linear(hiddenLayerSize[0], hiddenLayerSize[1])
-        self.fc3 = nn.Linear(hiddenLayerSize[1], numActions)
+        self.fc1 = NoisyLinear(inputSize, hiddenLayerSize[0])
+        self.fc2 = NoisyLinear(hiddenLayerSize[0], hiddenLayerSize[1])
+        self.fc3 = NoisyLinear(hiddenLayerSize[1], numActions)
 
     # Called with either one element to determine next action, or a batch
     # during optimization. Returns tensor([[left0exp,right0exp]...]).
@@ -209,6 +211,11 @@ class DQN(nn.Module):
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
         return x
+    
+    def sample_noise(self):
+        self.fc1.sample_noise()
+        self.fc2.sample_noise()
+        self.fc3.sample_noise()
 
 
 def select_action_e_greedy(
@@ -328,3 +335,49 @@ def load_model(model, model_path):
     """
     model.load_state_dict(torch.load(model_path))
     model.eval()
+
+class NoisyLinear(nn.Module):
+    """From https://github.com/Lizhi-sjtu/DRL-code-pytorch/blob/main/3.Rainbow_DQN/network.py"""
+    def __init__(self, in_features, out_features, sigma_init=0.5):
+        super().__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.sigma_init = sigma_init    
+
+        self.weight_mu = nn.Parameter(torch.empty(out_features, in_features))
+        self.weight_sigma = nn.Parameter(torch.empty(out_features, in_features))
+        self.register_buffer("weight_epsilon", torch.empty(out_features, in_features))
+
+        self.bias_mu = nn.Parameter(torch.empty(out_features))
+        self.bias_sigma = nn.Parameter(torch.empty(out_features))
+        self.register_buffer("bias_epsilon", torch.empty(out_features))
+
+        self.reset_parameters()
+        self.reset_noise()
+    
+    def forward(self, x):
+        if self.training:
+            weight = self.weight_mu + self.weight_sigma * self.weight_epsilon
+            bias = self.bias_mu + self.bias_sigma * self.bias_epsilon
+        else:
+            weight = self.weight_mu
+            bias = self.bias_mu
+        return F.linear(x, weight, bias)
+
+    def reset_parameters(self):
+        mu_range = 1 / math.sqrt(self.in_features)
+        self.weight_mu.data.uniform_(-mu_range, mu_range)
+        self.bias_mu.data.uniform_(-mu_range, mu_range)
+        self.weight_sigma.data.fill_(self.sigma_init / math.sqrt(self.in_features))
+        self.bias_sigma.data.fill_(self.sigma_init / math.sqrt(self.out_features))
+
+    def reset_noise(self):
+        epsilon_i = self.scale_noise(self.in_features)
+        epsilon_j = self.scale_noise(self.out_features)
+        self.weight_epsilon.copy_(torch.ger(epsilon_j, epsilon_i))
+        self.bias_epsilon.copy_(epsilon_j)
+
+    def scale_noise(self, size):
+        x = torch.randn(size)
+        x = x.sign().mul(x.abs().sqrt())
+        return x
