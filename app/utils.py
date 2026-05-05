@@ -34,6 +34,7 @@ import time
 
 # if gpu is to be used, otherwise use cpu
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#device = torch.device("cpu")
 
 # Define a named tuple to store the experiences
 Transition = namedtuple("Transition", ("currentState", "action", "nextState", "reward"))
@@ -309,7 +310,7 @@ def device_specific_episodes(episodes):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Run for more episodes if using GPU
-    if device == "cuda":
+    if str(device) == "cuda":
         return episodes * 10
     else:
         return episodes
