@@ -17,14 +17,15 @@ def render_optimal_policy():
     # Evaluation loop
     print("Start render...")
     # Set the path to the saved model
-    model_path = "models/trained_model.pth"
+    model_path = "models/new_model.pth"
 
     policy_net = DQN(inputSize, numActions, hiddenLayerSize)
     # update policy_net with model
     policy_net.load_state_dict(torch.load(model_path))
+    policy_net.to(device)
 
     # Create the environment
-    env = gym.make("MiniGrid-Empty-8x8-v0", render_mode="human")
+    env = gym.make("MiniGrid-SpikeCrossing-v0", render_mode="human")
     env = ImgObsWrapper(env)
 
     # Initialize Pygame
