@@ -21,6 +21,7 @@ from torch.utils.tensorboard import SummaryWriter
 # import functions
 from utils import *
 
+import time
 
 ### MODEL HYPERPARAMETERS
 numActions = 3  # 3 possible actions: left, right, move forward
@@ -28,9 +29,10 @@ inputSize = 49  # size of the flattened input state (7x7 matrix of tile IDs)
 
 ### TRAINING HYPERPARAMETERS
 alpha = 0.001  # learning_rate
-episodes = 3000  # Total episodes for training
+episodes = 9999999  # Total episodes for training
 batch_size = 64  # Neural network batch size
 target_update = 10000  # Number of episodes between updating target network
+max_total_steps = 10000  # Maximum number of steps to train for
 
 # Q learning hyperparameters
 gamma = 0.9  # Discounting rate
@@ -46,7 +48,7 @@ memorySize = 100000  # Number of experiences the Memory can keep - 500000
 
 
 # Update the number of episodes if training on GPU
-episodes = device_specific_episodes(episodes)
+#episodes = device_specific_episodes(episodes)
 
 # Set the random seed for reproducible experiments
 random.seed(5)
@@ -123,7 +125,8 @@ def optimize_model():
 
 
 # Make the environment
-env = create_minigrid_environment()
+env = create_minigrid_environment("MiniGrid-SpikeCrossing-v0")
+env = DeadlySpikes(env)
 
 # use wrapper to only extract observation
 env = ImgObsWrapper(env)
@@ -163,12 +166,13 @@ steps_done = 3
 
 max_steps = env.unwrapped.max_steps
 
-
+print(f"Training device: {device}")
 def train_model():
     global steps_done
 
     # Training loop
     print("Start training...")
+    start = time.time()
     for episode in range(episodes):
         obs, info = env.reset()
 
@@ -222,6 +226,12 @@ def train_model():
 
             # Update the number of steps taken
             steps_done += 1
+            if steps_done >= max_total_steps:
+                print(f"Reached maximum total steps of {max_total_steps}. Ending training...")
+                break
+
+        if steps_done >= max_total_steps:
+            break
 
         # Record the total reward for the episode
         writer.add_scalar("Reward/Episode", total_reward, episode)
@@ -231,6 +241,7 @@ def train_model():
         # Save the policy network
         # if episode % 100 == 0:
 
+    print(f"Run took {time.time() - start:.4f} seconds")
     # torch.save(policy_net.state_dict(), f'./models/trained_model.pth')
     save_model(policy_net, f"./models/new_model.pth")
 
