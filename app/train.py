@@ -22,6 +22,7 @@ from torch.utils.tensorboard import SummaryWriter
 from utils import *
 
 import time
+import pygame
 
 ### MODEL HYPERPARAMETERS
 numActions = 3  # 3 possible actions: left, right, move forward
@@ -32,14 +33,14 @@ alpha = 0.001  # learning_rate
 episodes = 9999999  # Total episodes for training
 batch_size = 64  # Neural network batch size
 target_update = 10000  # Number of episodes between updating target network
-max_total_steps = 10000  # Maximum number of steps to train for
+max_total_steps = 300000  # Maximum number of steps to train for
 
 # Q learning hyperparameters
 gamma = 0.9  # Discounting rate
 
 # Exploration parameters for epsilon greedy strategy
 start_epsilon = 0.9  # exploration probability at start
-stop_epsilon = 0.05  # minimum exploration probability
+stop_epsilon = 0.01  # minimum exploration probability
 decay_rate = 3000  # exponential decay rate for exploration prob
 
 ### MEMORY HYPERPARAMETERS
@@ -144,8 +145,11 @@ def optimize_model():
 
 
 # Make the environment
-env = create_minigrid_environment("MiniGrid-SpikeCrossing-v0")
-env = DeadlySpikes(env)
+#env = create_minigrid_environment("MiniGrid-SpikeCrossing-v0")
+env = create_minigrid_environment()
+#env = gym.make("MiniGrid-Empty-8x8-v0", render_mode="human")
+#env = DeadlySpikes(env)
+env = IntrinsicActionBonus(env, 0.1)
 
 # use wrapper to only extract observation
 env = ImgObsWrapper(env)
@@ -189,6 +193,8 @@ print(f"Training device: {device}")
 def train_model():
     global steps_done
 
+    #pygame.init()
+
     # Training loop
     print("Start training...")
     start = time.time()
@@ -204,7 +210,11 @@ def train_model():
             action = select_action(state)
 
             # Take the chosen action in the environment
-            next_obs, reward, done, truncated, _ = env.step(action.item())
+            next_obs, reward, done, truncated, info = env.step(action.item())
+
+            #env.render()
+
+            #print(f"Intrinsic reward: {reward}")
 
             # Preprocess the next state
             next_state = preprocess(next_obs)
@@ -219,7 +229,8 @@ def train_model():
 
             # Move to the next state
             state = next_state
-            total_reward += reward
+            total_reward += info["extrinsic reward"]
+            #total_reward += reward
 
             optimize_model()
 
