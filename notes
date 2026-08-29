@@ -1,0 +1,26 @@
+Checklist for runs:
+--PRE-RUN--
+1. Make sure total steps is correct.
+2. Make sure the random seed is correct.
+3. Make sure the environment and probability is correct.
+4. Use CPU instead of GPU (it's faster for some reason).
+4. Done!
+
+--POST-RUN--
+1. Rename the folder of the run to include exploration method, environment and probability.
+2. Rename the created model to include the same as above.
+3. Done!
+
+
+
+random.seed used for first batch:
+main.py: 5
+train.py: 0
+
+random.seed used for second batch:
+main.py: 2
+train.py: 2
+
+random.seed used for third batch:
+main.py: 3
+train.py: 3
